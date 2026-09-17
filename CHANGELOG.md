@@ -20,6 +20,10 @@ Found in the same session: renaming track 1 while tracks 0 and 1 were selected r
 - **Fix.** A shared `apply_to_track` helper reads the current track selection (`GetInfo Tracks`), selects the target alone (`SelectTracks Mode=Set`), runs the command, and restores the previous selection (`Set` + `Add`, or `Remove` over all tracks when nothing was selected) — in a `finally`, so a failed command cannot leave the selection changed. `SelectTracks` touches only the track selection, never the time range. Both tools now send `SetTrack`; gain goes out as both `Volume` and `Gain` (each version ignores the name it doesn't know), pan is converted to percent. An index beyond the project's track count is rejected before anything is selected, and `track_set_properties` with no property at all is an error instead of an empty command.
 - Tests: `tests/test_tools.py::TestTrackPropertiesTargetOneTrack` (exact command sequence for both restore shapes and the no-restore case, parameter names and scales, out-of-range index, restore-on-failure, nothing-to-set). Verified live on Audacity 3.7.9 with two stereo tracks: rename lands on one track with both still selected afterwards, mute/solo/volume/pan read back correctly via `GetInfo`.
 
+### `atexit` Registered the Async `close()`, So Nothing Was Closed at Exit
+
+- `main.py` registered `client.close` — an `async def` — with `atexit`. At interpreter exit that only created a coroutine object that was never awaited: the pipes were not closed and every run of the server (and of the test suite) ended with `RuntimeWarning: coroutine 'AudacityClient.close' was never awaited`. `AudacityClient.close_sync()` is the new synchronous close (it defers to a pending worker like `close()` does); `close()` delegates to it and `atexit` now registers `close_sync`. Tests: `tests/test_client.py::TestCloseSync`.
+
 ## [0.1.23] - 2026-09-04
 
 ### Timeout Misclassification on Python 3.10, Plus an Event-Loop-Blocking Measurement Bug Found While Checking For More

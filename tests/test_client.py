@@ -261,3 +261,30 @@ class TestExecutePendingReply:
         with patch.object(client, "_close_pipes") as close:
             await client.close()
         close.assert_called_once()
+
+
+class TestCloseSync:
+    """Regression: atexit was given the async close(), which only produced an
+    un-awaited coroutine at exit (RuntimeWarning, pipes left open)."""
+
+    def test_close_sync_closes_pipes(self, client):
+        with patch.object(client, "_close_pipes") as close:
+            client.close_sync()
+        close.assert_called_once()
+
+    def test_close_sync_defers_to_pending_worker(self, client):
+        client._pending = (MagicMock(), "Play")
+        with patch.object(client, "_close_pipes") as close:
+            client.close_sync()
+        close.assert_not_called()
+
+    def test_main_registers_a_sync_close_with_atexit(self):
+        import importlib
+        import inspect
+
+        with patch("atexit.register") as register:
+            import audacity_mcp.main as main
+            importlib.reload(main)
+        registered = [c.args[0] for c in register.call_args_list]
+        assert main.client.close_sync in registered
+        assert not any(inspect.iscoroutinefunction(fn) for fn in registered)

@@ -387,7 +387,15 @@ class AudacityClient:
         cmd_str = format_command(command, extra_params=extra_params, **params)
         return await self._run(command, cmd_str, Timeouts.LONG_COMMAND)
 
-    async def close(self):
+    def close_sync(self) -> None:
+        """Close the pipes; safe to register with atexit.
+
+        (Registering the async close() there only built a coroutine object at
+        exit that was never awaited: nothing got closed and Python warned.)
+        """
         if self._pending is not None:
             return  # the worker owns the pipes and closes them when the reply lands
         self._close_pipes()
+
+    async def close(self):
+        self.close_sync()
