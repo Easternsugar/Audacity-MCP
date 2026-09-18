@@ -349,8 +349,8 @@ class AudacityClient:
                 f"Audacity is still busy finishing an earlier command ({prev_command}); "
                 f"{command} was not sent. Wait for Audacity to become idle and retry.",
             )
-        except Exception:
-            pass  # the worker's own outcome was already reported to its caller
+        except Exception:  # noqa: S110 - the worker's own outcome was already reported to its caller
+            pass
         self._pending = None
 
     async def _run(self, command: str, cmd_str: str, timeout: float) -> dict:
